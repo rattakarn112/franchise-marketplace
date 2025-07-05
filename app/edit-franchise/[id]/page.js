@@ -1,10 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-
-import { useParams } from 'next/navigation'
 
 export default function EditFranchise() {
   const router = useRouter()
@@ -48,7 +46,9 @@ export default function EditFranchise() {
 
   // ดึงข้อมูลแฟรนไชส์เมื่อโหลดหน้า
   useEffect(() => {
-    fetchFranchiseData()
+    if (franchiseId) {
+      fetchFranchiseData()
+    }
   }, [franchiseId])
 
   // ฟังก์ชันดึงข้อมูล
@@ -72,6 +72,7 @@ export default function EditFranchise() {
         .single()
 
       if (error || !data) {
+        console.error('Error fetching data:', error)
         alert('ไม่พบข้อมูลหรือคุณไม่มีสิทธิ์แก้ไข')
         router.push('/dashboard')
         return
@@ -81,8 +82,8 @@ export default function EditFranchise() {
       setFormData({
         name: data.name || '',
         category: data.category || '',
-        investmentMin: data.investment_min || '',
-        investmentMax: data.investment_max || '',
+        investmentMin: data.investment_min?.toString() || '',
+        investmentMax: data.investment_max?.toString() || '',
         description: data.description || '',
         contact: data.contact || '',
         lineId: data.line_id || '',
@@ -121,10 +122,15 @@ export default function EditFranchise() {
     }
   }
 
-  // ฟังก์ชันจัดการการเลือกรูปภาพ
+  // ฟังก์ชันจัดการการเลือกรูปภาพ - แก้ไขใหม่
   const handleImageChange = (e) => {
     const file = e.target.files[0]
+    console.log('File selected:', file) // Debug log
+    
     if (file) {
+      console.log('File size:', file.size)
+      console.log('File type:', file.type)
+      
       // ตรวจสอบขนาดไฟล์ (ไม่เกิน 5MB)
       if (file.size > 5 * 1024 * 1024) {
         alert('ไฟล์รูปภาพต้องไม่เกิน 5MB')
@@ -138,20 +144,57 @@ export default function EditFranchise() {
       }
 
       setImageFile(file)
+      console.log('Image file set:', file.name)
       
       // สร้าง preview
       const reader = new FileReader()
       reader.onloadend = () => {
+        console.log('Setting preview')
         setImagePreview(reader.result)
+      }
+      reader.onerror = () => {
+        console.error('Error reading file')
+        alert('เกิดข้อผิดพลาดในการอ่านไฟล์')
       }
       reader.readAsDataURL(file)
     }
   }
 
+  // ฟังก์ชันรีเซ็ตรูปภาพ
+  const resetImage = () => {
+    console.log('Resetting image')
+    setImageFile(null)
+    setImagePreview(currentImageUrl) // กลับไปเป็นรูปเดิม
+    
+    // รีเซ็ต file input
+    const fileInput = document.getElementById('file-upload')
+    if (fileInput) {
+      fileInput.value = ''
+    }
+  }
+
+  // ฟังก์ชันลบรูปภาพ
+  const removeImage = () => {
+    console.log('Removing image')
+    setImageFile(null)
+    setImagePreview(null)
+    setCurrentImageUrl(null)
+    
+    // รีเซ็ต file input
+    const fileInput = document.getElementById('file-upload')
+    if (fileInput) {
+      fileInput.value = ''
+    }
+  }
+
   // ฟังก์ชันอัพโหลดรูปภาพ
   const uploadImage = async () => {
-    if (!imageFile) return currentImageUrl
+    if (!imageFile) {
+      console.log('No new image file, using current URL:', currentImageUrl)
+      return currentImageUrl
+    }
 
+    console.log('Starting image upload...')
     setUploadingImage(true)
     
     try {
@@ -160,22 +203,31 @@ export default function EditFranchise() {
       const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`
       const filePath = `franchises/${fileName}`
 
+      console.log('Uploading to:', filePath)
+
       // อัพโหลดไปยัง Supabase Storage
       const { data, error } = await supabase.storage
         .from('franchise-images')
         .upload(filePath, imageFile)
 
-      if (error) throw error
+      if (error) {
+        console.error('Upload error:', error)
+        throw error
+      }
+
+      console.log('Upload successful:', data)
 
       // สร้าง public URL
       const { data: { publicUrl } } = supabase.storage
         .from('franchise-images')
         .getPublicUrl(filePath)
 
+      console.log('Public URL:', publicUrl)
       return publicUrl
+
     } catch (error) {
       console.error('Error uploading image:', error)
-      alert('เกิดข้อผิดพลาดในการอัพโหลดรูปภาพ')
+      alert('เกิดข้อผิดพลาดในการอัพโหลดรูปภาพ: ' + error.message)
       return currentImageUrl
     } finally {
       setUploadingImage(false)
@@ -205,6 +257,9 @@ export default function EditFranchise() {
     if (!formData.investmentMin || !formData.investmentMax) {
       newErrors.investment = 'กรุณากรอกเงินลงทุน'
     }
+    if (parseInt(formData.investmentMin) >= parseInt(formData.investmentMax)) {
+      newErrors.investment = 'เงินลงทุนขั้นต่ำต้องน้อยกว่าขั้นสูง'
+    }
     if (!formData.contact.trim() && !formData.lineId.trim()) {
       newErrors.contact = 'กรุณากรอกเบอร์โทร หรือ LINE ID อย่างน้อย 1 อย่าง'
     }
@@ -219,8 +274,10 @@ export default function EditFranchise() {
   // ฟังก์ชันบันทึกข้อมูล
   const handleSubmit = async (e) => {
     e.preventDefault()
+    console.log('Form submitted')
     
     if (!validateForm()) {
+      console.log('Form validation failed')
       return
     }
 
@@ -235,34 +292,56 @@ export default function EditFranchise() {
         return
       }
 
+      console.log('User confirmed:', user.id)
+      console.log('Current image URL:', currentImageUrl)
+      console.log('New image file:', imageFile)
+
       // อัพโหลดรูปภาพใหม่ (ถ้ามี)
-      let imageUrl = currentImageUrl
+      let imageUrl = null
       if (imageFile) {
+        console.log('Uploading new image...')
         imageUrl = await uploadImage()
+      } else if (imagePreview) {
+        console.log('Using existing image URL')
+        imageUrl = currentImageUrl
       }
+
+      console.log('Final image URL:', imageUrl)
 
       // เตรียมข้อมูลสำหรับอัพเดท
       const dataToUpdate = {
-        name: formData.name,
+        name: formData.name.trim(),
         category: formData.category,
         investment_min: parseInt(formData.investmentMin),
         investment_max: parseInt(formData.investmentMax),
-        description: formData.description,
-        contact: formData.contact || null,
-        line_id: formData.lineId || null,
-        location: formData.location || null,
+        description: formData.description.trim(),
+        contact: formData.contact.trim() || null,
+        line_id: formData.lineId.trim() || null,
+        location: formData.location.trim() || null,
         features: formData.features,
         image_url: imageUrl
       }
 
+      console.log('Data to update:', dataToUpdate)
+
       // อัพเดทข้อมูล
-      const { error } = await supabase
+      const { data: updateResult, error } = await supabase
         .from('franchises')
         .update(dataToUpdate)
         .eq('id', franchiseId)
         .eq('user_id', user.id)
+        .select()
 
-      if (error) throw error
+      if (error) {
+        console.error('Update error:', error)
+        throw error
+      }
+
+      console.log('Update successful, result:', updateResult)
+      
+      if (!updateResult || updateResult.length === 0) {
+        throw new Error('ไม่สามารถอัพเดทข้อมูลได้ - อาจไม่มีสิทธิ์หรือไม่พบข้อมูล')
+      }
 
       // แสดงข้อความสำเร็จ
       setShowSuccess(true)
@@ -273,7 +352,7 @@ export default function EditFranchise() {
       }, 2000)
 
     } catch (error) {
-      console.error('Error:', error)
+      console.error('Error in handleSubmit:', error)
       alert('เกิดข้อผิดพลาด: ' + error.message)
     } finally {
       setLoading(false)
@@ -328,47 +407,66 @@ export default function EditFranchise() {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 รูปภาพแฟรนไชส์
               </label>
-              <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg">
+              <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg hover:border-blue-400 transition-colors">
                 <div className="space-y-1 text-center">
                   {imagePreview ? (
                     <div className="relative">
                       <img 
                         src={imagePreview} 
                         alt="Preview" 
-                        className="mx-auto h-32 w-32 object-cover rounded-lg"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setImageFile(null)
-                          setImagePreview(currentImageUrl)
+                        className="mx-auto h-40 w-40 object-cover rounded-lg border-2 border-gray-200"
+                        onError={(e) => {
+                          console.error('Image load error:', e)
+                          e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160"><rect fill="%23f3f4f6" width="160" height="160"/><text fill="%236b7280" font-family="sans-serif" font-size="20" text-anchor="middle" x="80" y="85">รูปภาพ</text></svg>'
                         }}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                      >
-                        ✕
-                      </button>
+                      />
+                      <div className="absolute -top-2 -right-2 flex gap-1">
+                        <button
+                          type="button"
+                          onClick={removeImage}
+                          className="bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors text-xs"
+                          title="ลบรูป"
+                        >
+                          🗑️
+                        </button>
+                        <button
+                          type="button"
+                          onClick={resetImage}
+                          className="bg-gray-500 text-white rounded-full p-1 hover:bg-gray-600 transition-colors text-xs"
+                          title="รีเซ็ต"
+                        >
+                          ↺
+                        </button>
+                      </div>
+                      <p className="text-xs text-green-600 mt-2">
+                        {imageFile ? '✅ เลือกรูปใหม่แล้ว' : '📷 รูปปัจจุบัน'}
+                      </p>
                     </div>
                   ) : (
-                    <svg
-                      className="mx-auto h-12 w-12 text-gray-400"
-                      stroke="currentColor"
-                      fill="none"
-                      viewBox="0 0 48 48"
-                    >
-                      <path
-                        d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
-                        strokeWidth={2}
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
+                    <div className="text-center">
+                      <svg
+                        className="mx-auto h-12 w-12 text-gray-400"
+                        stroke="currentColor"
+                        fill="none"
+                        viewBox="0 0 48 48"
+                      >
+                        <path
+                          d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                          strokeWidth={2}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                      <p className="text-sm text-gray-500 mt-2">ไม่มีรูปภาพ</p>
+                    </div>
                   )}
+                  
                   <div className="flex text-sm text-gray-600">
                     <label
                       htmlFor="file-upload"
-                      className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500"
+                      className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500 px-2 py-1 border border-blue-200 hover:border-blue-400 transition-all"
                     >
-                      <span>{imagePreview ? 'เปลี่ยนรูป' : 'เลือกรูปภาพ'}</span>
+                      <span>📁 {imagePreview ? 'เปลี่ยนรูป' : 'เลือกรูปภาพ'}</span>
                       <input
                         id="file-upload"
                         name="file-upload"
@@ -376,9 +474,9 @@ export default function EditFranchise() {
                         className="sr-only"
                         onChange={handleImageChange}
                         accept="image/*"
+                        key={imageFile ? imageFile.name : 'empty'} // Force re-render
                       />
                     </label>
-                    <p className="pl-1">หรือลากไฟล์มาวาง</p>
                   </div>
                   <p className="text-xs text-gray-500">PNG, JPG ไม่เกิน 5MB</p>
                 </div>
@@ -443,6 +541,7 @@ export default function EditFranchise() {
                       errors.investment ? 'border-red-500' : 'border-gray-300'
                     }`}
                     placeholder="ต่ำสุด"
+                    min="0"
                   />
                 </div>
                 <div>
@@ -455,6 +554,7 @@ export default function EditFranchise() {
                       errors.investment ? 'border-red-500' : 'border-gray-300'
                     }`}
                     placeholder="สูงสุด"
+                    min="0"
                   />
                 </div>
               </div>
@@ -471,7 +571,7 @@ export default function EditFranchise() {
                 value={formData.description}
                 onChange={handleChange}
                 rows="4"
-                className={`w-full px-3 py-2 border rounded-lg text-black focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                className={`w-full px-3 py-2 border rounded-lg text-black focus:outline-none focus:ring-2 focus:ring-blue-500 resize-vertical ${
                   errors.description ? 'border-red-500' : 'border-gray-300'
                 }`}
                 placeholder="อธิบายจุดเด่น ผลตอบแทน และข้อมูลสำคัญอื่นๆ"
@@ -501,12 +601,12 @@ export default function EditFranchise() {
               </label>
               <div className="grid grid-cols-2 gap-3">
                 {availableFeatures.map(feature => (
-                  <label key={feature} className="flex items-center space-x-2 cursor-pointer">
+                  <label key={feature} className="flex items-center space-x-2 cursor-pointer p-2 rounded hover:bg-gray-50">
                     <input
                       type="checkbox"
                       checked={formData.features.includes(feature)}
                       onChange={() => handleFeatureToggle(feature)}
-                      className="text-blue-600 rounded"
+                      className="text-blue-600 rounded focus:ring-blue-500"
                     />
                     <span className="text-sm">{feature}</span>
                   </label>
@@ -516,13 +616,13 @@ export default function EditFranchise() {
 
             {/* ช่องทางติดต่อ */}
             <div className="space-y-4">
-              <h3 className="font-medium">ช่องทางติดต่อ *</h3>
+              <h3 className="font-medium text-gray-900">ช่องทางติดต่อ *</h3>
               <div>
                 <label className="block text-sm text-gray-700 mb-1">
                   เบอร์โทรศัพท์
                 </label>
                 <input
-                  type="text"
+                  type="tel"
                   name="contact"
                   value={formData.contact}
                   onChange={handleChange}
@@ -547,24 +647,25 @@ export default function EditFranchise() {
             </div>
 
             {/* ปุ่ม Submit */}
-            <div className="flex gap-4">
+            <div className="flex gap-4 pt-4">
               <button
                 type="submit"
                 disabled={loading || uploadingImage}
-                className={`flex-1 py-3 rounded-lg font-medium ${
+                className={`flex-1 py-3 rounded-lg font-medium transition-all ${
                   loading || uploadingImage
                     ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
-                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                    : 'bg-blue-600 text-white hover:bg-blue-700 shadow-md hover:shadow-lg'
                 }`}
               >
-                {uploadingImage ? 'กำลังอัพโหลดรูป...' : loading ? 'กำลังบันทึก...' : 'บันทึกการแก้ไข'}
+                {uploadingImage ? '📤 กำลังอัพโหลดรูป...' : loading ? '💾 กำลังบันทึก...' : '✅ บันทึกการแก้ไข'}
               </button>
               <button
                 type="button"
                 onClick={() => router.push('/dashboard')}
-                className="flex-1 bg-gray-300 text-gray-700 py-3 rounded-lg hover:bg-gray-400 font-medium"
+                disabled={loading || uploadingImage}
+                className="flex-1 bg-gray-300 text-gray-700 py-3 rounded-lg hover:bg-gray-400 font-medium transition-all disabled:opacity-50"
               >
-                ยกเลิก
+                ❌ ยกเลิก
               </button>
             </div>
           </form>
