@@ -101,7 +101,7 @@ const checkUser = async () => {
       {/* Header */}
       <header className="bg-white shadow-sm">
   <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-    <h1 className="text-2xl font-bold text-blue-600">🏪 FranHub</h1>
+    <h1 className="text-2xl font-bold text-blue-600">FranchiseHub</h1>
     
     <div className="flex gap-2">
       {currentUser ? (
@@ -199,83 +199,96 @@ const checkUser = async () => {
           </p>
         )}
 
-        {/* Franchise Grid */}
-        {!loading && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredFranchises.map(franchise => (
-              <div key={franchise.id} className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow">
-                {/* Franchise Image */}
-                <div className="h-48 bg-gray-100 rounded-t-lg overflow-hidden">
-                  {franchise.imageUrl ? (
-                    <img 
-                      src={franchise.imageUrl} 
-                      alt={franchise.name}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        // ถ้าโหลดรูปไม่ได้ ให้แสดง icon แทน
-                        e.target.onerror = null;
-                        e.target.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200"><rect fill="%23f3f4f6" width="200" height="200"/><text fill="%236b7280" font-family="sans-serif" font-size="60" text-anchor="middle" x="100" y="115">${franchise.icon}</text></svg>`;
-                      }}
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-6xl bg-gray-100">
-                      {franchise.icon}
-                    </div>
-                  )}
-                </div>
-                
-                {/* Franchise Details */}
-                <div className="p-6">
-                  <h3 className="text-xl font-semibold mb-2">{franchise.name}</h3>
-                  <p className="text-gray-600 text-sm mb-2">{franchise.category}</p>
-                  <p className="text-gray-700 mb-4 line-clamp-2">{franchise.description}</p>
-                  
-                  {/* Location */}
-                  {franchise.location && (
-                    <p className="text-sm text-gray-500 mb-3">
-                      📍 {franchise.location}
-                    </p>
-                  )}
-                  
-                  {/* Features */}
-                  {franchise.features.length > 0 && (
-                    <div className="mb-3 flex flex-wrap gap-1">
-                      {franchise.features.slice(0, 2).map((feature, index) => (
-                        <span key={index} className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
-                          {feature}
-                        </span>
-                      ))}
-                      {franchise.features.length > 2 && (
-                        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
-                          +{franchise.features.length - 2}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                  
-                  <div className="flex items-center text-green-600 font-semibold mb-4">
-                    <span className="mr-2">💰</span>
-                    <span>{franchise.investment} บาท</span>
-                  </div>
-                  
-                  <div className="flex gap-2">
-                    <button className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 text-sm">
-                      ดูรายละเอียด
-                    </button>
-                    {franchise.contact && (
-                      <a 
-                        href={`tel:${franchise.contact}`}
-                        className="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 text-sm text-center"
-                      >
-                        📞 ติดต่อ
-                      </a>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
+     {/* Franchise Grid */}
+{!loading && (
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    {filteredFranchises.map(franchise => (
+      <div key={franchise.id} className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow">
+        {/* Franchise Image - เพิ่ม onClick */}
+        <div 
+          className="h-48 bg-gray-100 rounded-t-lg overflow-hidden cursor-pointer"
+          onClick={() => window.location.href = `/franchise/${franchise.id}`}
+        >
+          {franchise.imageUrl ? (
+            <img 
+              src={franchise.imageUrl} 
+              alt={franchise.name}
+              className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200"><rect fill="%23f3f4f6" width="200" height="200"/><text fill="%236b7280" font-family="sans-serif" font-size="60" text-anchor="middle" x="100" y="115">${franchise.icon}</text></svg>`;
+              }}
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-6xl bg-gray-100 hover:bg-gray-200 transition-colors">
+              {franchise.icon}
+            </div>
+          )}
+        </div>
+        
+        {/* Franchise Details */}
+        <div className="p-6">
+          {/* Title - เพิ่ม onClick */}
+          <h3 
+            className="text-xl font-semibold mb-2 cursor-pointer hover:text-blue-600 transition-colors"
+            onClick={() => window.location.href = `/franchise/${franchise.id}`}
+          >
+            {franchise.name}
+          </h3>
+          <p className="text-gray-600 text-sm mb-2">{franchise.category}</p>
+          <p className="text-gray-700 mb-4 line-clamp-2">{franchise.description}</p>
+          
+          {/* Location */}
+          {franchise.location && (
+            <p className="text-sm text-gray-500 mb-3">
+              📍 {franchise.location}
+            </p>
+          )}
+          
+          {/* Features */}
+          {franchise.features.length > 0 && (
+            <div className="mb-3 flex flex-wrap gap-1">
+              {franchise.features.slice(0, 2).map((feature, index) => (
+                <span key={index} className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                  {feature}
+                </span>
+              ))}
+              {franchise.features.length > 2 && (
+                <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
+                  +{franchise.features.length - 2}
+                </span>
+              )}
+            </div>
+          )}
+          
+          <div className="flex items-center text-green-600 font-semibold mb-4">
+            <span className="mr-2">💰</span>
+            <span>{franchise.investment} บาท</span>
           </div>
-        )}
+          
+          <div className="flex gap-2">
+            {/* ปุ่มดูรายละเอียด - อัปเดต onClick */}
+            <button 
+              onClick={() => window.location.href = `/franchise/${franchise.id}`}
+              className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 text-sm transition-colors"
+            >
+              ดูรายละเอียด
+            </button>
+            {franchise.contact && (
+              <a 
+                href={`tel:${franchise.contact}`}
+                onClick={(e) => e.stopPropagation()}
+                className="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 text-sm text-center transition-colors"
+              >
+                📞 ติดต่อ
+              </a>
+            )}
+          </div>
+        </div>
+      </div>
+    ))}
+  </div>
+)}
 
         {/* No Results */}
         {!loading && filteredFranchises.length === 0 && (
