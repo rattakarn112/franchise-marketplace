@@ -1,5 +1,6 @@
 import { Inter, Kanit } from "next/font/google";
 import "./globals.css";
+import Analytics from './Analytics'
 
 // Font สำหรับ English
 const inter = Inter({
@@ -62,6 +63,7 @@ export default function RootLayout({ children }) {
         className={`${kanit.className} antialiased bg-gray-50 text-gray-900`}
       >
         {children}
+        <Analytics />  
       </body>
     </html>
   );

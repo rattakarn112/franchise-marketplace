@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import FranchiseHubLogo from '../../components/Logo'
+import FranchiseHubLogo from '@/components/Logo'
 
 
 export default function NotFound() {
