@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
-export default function AuthPage() {
+function AuthPageContent() {
   const router = useRouter()
   const [isLogin, setIsLogin] = useState(true)
   const [loading, setLoading] = useState(false)
@@ -27,11 +27,7 @@ export default function AuthPage() {
 
       if (error) throw error
 
-      // Login สำเร็จ
       setMessage({ type: 'success', text: 'เข้าสู่ระบบสำเร็จ!' })
-      
-      // Save user to localStorage
-      localStorage.setItem('user', JSON.stringify(data.user))
       
       setTimeout(() => {
         router.push('/')
@@ -50,7 +46,6 @@ export default function AuthPage() {
     setLoading(true)
     setMessage({ type: '', text: '' })
 
-    // ตรวจสอบรหัสผ่าน
     if (password !== confirmPassword) {
       setMessage({ type: 'error', text: 'รหัสผ่านไม่ตรงกัน' })
       setLoading(false)
@@ -71,13 +66,11 @@ export default function AuthPage() {
 
       if (error) throw error
 
-      // Register สำเร็จ
       setMessage({ 
         type: 'success', 
         text: 'สมัครสมาชิกสำเร็จ! กรุณาตรวจสอบอีเมลเพื่อยืนยันบัญชี' 
       })
       
-      // Clear form
       setEmail('')
       setPassword('')
       setConfirmPassword('')
@@ -188,7 +181,6 @@ export default function AuthPage() {
                 </button>
               </form>
             ) : (
-              /* Register Form */
               <form onSubmit={handleRegister} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -259,5 +251,20 @@ export default function AuthPage() {
         </div>
       </main>
     </div>
+  )
+}
+
+export default function AuthPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <p className="mt-4 text-gray-600">กำลังโหลด...</p>
+        </div>
+      </div>
+    }>
+      <AuthPageContent />
+    </Suspense>
   )
 }

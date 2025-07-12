@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
-export default function PaymentSuccess() {
+function PaymentSuccessContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const sessionId = searchParams.get('session_id')
@@ -15,7 +15,6 @@ export default function PaymentSuccess() {
 
   useEffect(() => {
     if (sessionId) {
-      // For demo purposes, simulate payment success
       simulatePaymentSuccess()
     } else {
       setError('ไม่พบรหัสการชำระเงิน')
@@ -27,21 +26,17 @@ export default function PaymentSuccess() {
     try {
       setLoading(true)
       
-      // Simulate payment verification delay
       await new Promise(resolve => setTimeout(resolve, 2000))
       
-      // Get current user
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         throw new Error('ไม่พบข้อมูลผู้ใช้')
       }
 
-      // For demo, create a premium subscription
-      const planType = 'premium' // You can change this based on what was selected
+      const planType = 'premium'
       const periodEnd = new Date()
       periodEnd.setDate(periodEnd.getDate() + 30)
 
-      // Check if user already has active subscription
       const { data: existingSubscription } = await supabase
         .from('subscriptions')
         .select('*')
@@ -50,7 +45,6 @@ export default function PaymentSuccess() {
         .single()
 
       if (existingSubscription) {
-        // Update existing subscription
         const { error } = await supabase
           .from('subscriptions')
           .update({
@@ -63,7 +57,6 @@ export default function PaymentSuccess() {
 
         if (error) throw error
       } else {
-        // Create new subscription
         const { error } = await supabase
           .from('subscriptions')
           .insert({
@@ -114,7 +107,7 @@ export default function PaymentSuccess() {
               ชำระเงินสำเร็จ!
             </h1>
             <p className="text-gray-600 mb-6">
-              ขอบคุณที่อัปเกรดเป็นสมาชิک <strong>{planName}</strong><br/>
+              ขอบคุณที่อัปเกรดเป็นสมาชิค <strong>{planName}</strong><br/>
               คุณสามารถใช้งานฟีเจอร์ใหม่ได้แล้ว
             </p>
             
@@ -122,7 +115,7 @@ export default function PaymentSuccess() {
               <h3 className="font-semibold text-blue-800 mb-2">🎉 สิทธิประโยชน์ที่ได้รับ:</h3>
               <ul className="text-sm text-blue-700 space-y-1">
                 <li>✅ ลงประกาศได้ 5 รายการ</li>
-                <li>✅ Badge "Premium Seller"</li>
+                <li>✅ Badge Premium Seller</li>
                 <li>✅ Analytics Dashboard</li>
                 <li>✅ Priority Support</li>
                 <li>✅ Boost Discount 10%</li>
@@ -171,5 +164,20 @@ export default function PaymentSuccess() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function PaymentSuccess() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <p className="mt-4 text-gray-600">กำลังโหลด...</p>
+        </div>
+      </div>
+    }>
+      <PaymentSuccessContent />
+    </Suspense>
   )
 }
