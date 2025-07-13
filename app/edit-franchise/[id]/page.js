@@ -673,4 +673,4 @@ export default function EditFranchise() {
       </main>
     </div>
   )
-}ื
+}

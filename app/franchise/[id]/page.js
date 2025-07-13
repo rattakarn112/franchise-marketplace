@@ -429,6 +429,6 @@ export default function FranchiseDetail() {
           </div>
         </div>
       )}
-    </div>
+       </div>
   )
 }
